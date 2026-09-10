@@ -1,6 +1,7 @@
 package com.example.offlinechat;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -15,6 +16,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -26,6 +28,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -38,6 +41,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private static final String TAG = "ChatActivity";
     private static final int PICK_IMAGE_REQUEST = 101;
+    private static final int PERMISSION_IMAGE_REQUEST = 102;
     private static final int PORT = 8888;
 
     private TextView tvChatStatus;
@@ -96,12 +100,9 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
-        btnAttach.setOnClickListener(v -> openGallery());
+        btnAttach.setOnClickListener(v -> checkPermissionAndOpenGallery());
     }
 
-    // =====================================================
-    // SERVER SOCKET (HOST)
-    // =====================================================
     private void startServer() {
         executorService.execute(() -> {
             try {
@@ -118,9 +119,6 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
-    // =====================================================
-    // CLIENT SOCKET (CLIENT)
-    // =====================================================
     private void connectToServer(String hostAddress) {
         executorService.execute(() -> {
             int attempts = 0;
@@ -156,9 +154,6 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
-    // =====================================================
-    // SAFE SEND MESSAGE (NO CRASH)
-    // =====================================================
     private void sendMessage(String msg) {
         executorService.execute(() -> {
             try {
@@ -176,16 +171,14 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
-    // =====================================================
-    // SAFE SEND IMAGE
-    // =====================================================
     private void sendImage(Uri imageUri, Bitmap bitmap) {
         if (!isConnected || dataOutputStream == null) return;
 
         executorService.execute(() -> {
             try {
                 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 50, byteArrayOutputStream);
+                // ছবি কম্প্রেস করে মান সামঞ্জস্য রাখা
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 60, byteArrayOutputStream);
                 byte[] bytes = byteArrayOutputStream.toByteArray();
 
                 dataOutputStream.writeUTF("IMAGE");
@@ -193,7 +186,6 @@ public class ChatActivity extends AppCompatActivity {
                 dataOutputStream.write(bytes);
                 dataOutputStream.flush();
 
-                // Bitmap-এর পরিবর্তে String Uri পাঠানো হচ্ছে
                 addMessageToUI(new ChatMessage(imageUri.toString(), true, true));
             } catch (Exception e) {
                 Log.e(TAG, "Image Send Error", e);
@@ -202,9 +194,6 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
-    // =====================================================
-    // SAFE INCOMING DATA LISTEN
-    // =====================================================
     private void listenForIncomingData() {
         executorService.execute(() -> {
             while (isConnected && socket != null && !socket.isClosed()) {
@@ -222,7 +211,6 @@ public class ChatActivity extends AppCompatActivity {
 
                         Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
                         if (bitmap != null) {
-                            // প্রাপ্ত Bitmap-কে লোকাল ক্যাশে সেভ করে তার URI নেওয়া হচ্ছে
                             String savedImagePath = saveBitmapToCache(bitmap);
                             if (savedImagePath != null) {
                                 addMessageToUI(new ChatMessage(savedImagePath, false, true));
@@ -239,11 +227,10 @@ public class ChatActivity extends AppCompatActivity {
         });
     }
 
-    // Bitmap-কে Temp ফাইল হিসেবে সেভ করার হেল্পার মেথড
     private String saveBitmapToCache(Bitmap bitmap) {
         try {
             File cachePath = new File(getCacheDir(), "images");
-            cachePath.mkdirs();
+            if (!cachePath.exists()) cachePath.mkdirs();
             File file = new File(cachePath, "received_image_" + System.currentTimeMillis() + ".jpg");
             FileOutputStream stream = new FileOutputStream(file);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
@@ -255,9 +242,6 @@ public class ChatActivity extends AppCompatActivity {
         }
     }
 
-    // =====================================================
-    // SAFE UI UPDATES (Crash-Proof)
-    // =====================================================
     private void addMessageToUI(ChatMessage message) {
         mainHandler.post(() -> {
             try {
@@ -282,30 +266,42 @@ public class ChatActivity extends AppCompatActivity {
         mainHandler.post(() -> Toast.makeText(ChatActivity.this, message, Toast.LENGTH_SHORT).show());
     }
 
-    private void openGallery() {
-        // Android 13+ (API level 33+) এর জন্য READ_MEDIA_IMAGES চেক
+    private void checkPermissionAndOpenGallery() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_MEDIA_IMAGES)
-                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    != PackageManager.PERMISSION_GRANTED) {
 
                 androidx.core.app.ActivityCompat.requestPermissions(this,
-                        new String[]{android.Manifest.permission.READ_MEDIA_IMAGES}, 102);
+                        new String[]{android.Manifest.permission.READ_MEDIA_IMAGES}, PERMISSION_IMAGE_REQUEST);
                 return;
             }
         } else {
-            // Android 12 ও তার নিচের জন্য READ_EXTERNAL_STORAGE চেক
             if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    != PackageManager.PERMISSION_GRANTED) {
 
                 androidx.core.app.ActivityCompat.requestPermissions(this,
-                        new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 102);
+                        new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_IMAGE_REQUEST);
                 return;
             }
         }
+        openGallery();
+    }
 
-        // পারমিশন দেওয়া থাকলে সরাসরি গ্যালারি খুলবে
+    private void openGallery() {
         Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         startActivityForResult(intent, PICK_IMAGE_REQUEST);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_IMAGE_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                openGallery();
+            } else {
+                Toast.makeText(this, "Permission denied to read images", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override
@@ -314,8 +310,14 @@ public class ChatActivity extends AppCompatActivity {
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
             Uri imageUri = data.getData();
             try {
-                Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), imageUri);
-                sendImage(imageUri, bitmap);
+                // মেমরি লিক এড়াতে InputStream দিয়ে নিরাপদে Bitmap রিড করা
+                InputStream inputStream = getContentResolver().openInputStream(imageUri);
+                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                if (inputStream != null) inputStream.close();
+
+                if (bitmap != null) {
+                    sendImage(imageUri, bitmap);
+                }
             } catch (Exception e) {
                 Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show();
             }
