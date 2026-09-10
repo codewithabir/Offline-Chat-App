@@ -231,6 +231,11 @@ public class MainActivity extends AppCompatActivity
         } else {
             registerReceiver(receiver, intentFilter);
         }
+
+        // অ্যাপে ব্যাক আসলে বা স্ক্রিন অন হলে অটো-ডিসকভারি চালু হবে যাতে অন্য ফোন থেকে সার্চ দিলে এটি পাওয়া যায়
+        if (hasPermission() && isWifiEnabled() && isLocationEnabled()) {
+            initiateDiscovery();
+        }
     }
 
     @Override

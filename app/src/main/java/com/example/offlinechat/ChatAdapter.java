@@ -1,23 +1,23 @@
 package com.example.offlinechat;
 
-import android.content.Context;
-import android.view.Gravity;
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
 import java.util.List;
 
-public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder> {
+public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    private static final int VIEW_TYPE_SENT = 1;
+    private static final int VIEW_TYPE_RECEIVED = 2;
 
     private final List<ChatMessage> messageList;
 
@@ -25,62 +25,107 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ChatViewHolder
         this.messageList = messageList;
     }
 
+    @Override
+    public int getItemViewType(int position) {
+        ChatMessage message = messageList.get(position);
+        if (message.isSentByMe()) {
+            return VIEW_TYPE_SENT;
+        } else {
+            return VIEW_TYPE_RECEIVED;
+        }
+    }
+
     @NonNull
     @Override
-    public ChatViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_message, parent, false);
-        return new ChatViewHolder(view);
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == VIEW_TYPE_SENT) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_message_sent, parent, false);
+            return new SentMessageViewHolder(view);
+        } else {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_message_received, parent, false);
+            return new ReceivedMessageViewHolder(view);
+        }
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ChatViewHolder holder, int position) {
-        ChatMessage chatMessage = messageList.get(position);
-        Context context = holder.itemView.getContext();
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+        ChatMessage message = messageList.get(position);
 
-        // Layout Gravity & Background Color setup
-        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) holder.layoutContainer.getLayoutParams();
-
-        if (chatMessage.isSentByMe()) {
-            params.gravity = Gravity.END;
-            holder.tvMessage.setBackgroundColor(ContextCompat.getColor(context, android.R.color.holo_blue_dark));
-        } else {
-            params.gravity = Gravity.START;
-            holder.tvMessage.setBackgroundColor(ContextCompat.getColor(context, android.R.color.darker_gray));
-        }
-        holder.layoutContainer.setLayoutParams(params);
-
-        // Content Display Logic
-        if (chatMessage.getImageUri() != null) {
-            holder.imgMessage.setVisibility(View.VISIBLE);
-            holder.tvMessage.setVisibility(View.GONE);
-
-            // Glide দিয়ে নিরাপদে ইমেজ লোড করা
-            Glide.with(context)
-                    .load(chatMessage.getImageUri())
-                    .into(holder.imgMessage);
-
-        } else {
-            holder.tvMessage.setVisibility(View.VISIBLE);
-            holder.imgMessage.setVisibility(View.GONE);
-            holder.tvMessage.setText(chatMessage.getMessage());
+        if (holder instanceof SentMessageViewHolder) {
+            ((SentMessageViewHolder) holder).bind(message);
+        } else if (holder instanceof ReceivedMessageViewHolder) {
+            ((ReceivedMessageViewHolder) holder).bind(message);
         }
     }
 
     @Override
     public int getItemCount() {
-        return messageList.size();
+        return messageList != null ? messageList.size() : 0;
     }
 
-    static class ChatViewHolder extends RecyclerView.ViewHolder {
-        LinearLayout layoutContainer;
+    // ==========================================
+    // SENT MESSAGE VIEWHOLDER
+    // ==========================================
+    static class SentMessageViewHolder extends RecyclerView.ViewHolder {
         TextView tvMessage;
-        ImageView imgMessage;
+        ImageView ivImage;
 
-        public ChatViewHolder(@NonNull View itemView) {
+        SentMessageViewHolder(@NonNull View itemView) {
             super(itemView);
-            layoutContainer = itemView.findViewById(R.id.layoutContainer);
             tvMessage = itemView.findViewById(R.id.tvMessage);
-            imgMessage = itemView.findViewById(R.id.imgMessage);
+            ivImage = itemView.findViewById(R.id.ivImage);
+        }
+
+        void bind(ChatMessage message) {
+            if (message.isImage()) {
+                if (tvMessage != null) tvMessage.setVisibility(View.GONE);
+                if (ivImage != null) {
+                    ivImage.setVisibility(View.VISIBLE);
+                    Glide.with(itemView.getContext())
+                            .load(Uri.parse(message.getMessage()))
+                            .into(ivImage);
+                }
+            } else {
+                if (ivImage != null) ivImage.setVisibility(View.GONE);
+                if (tvMessage != null) {
+                    tvMessage.setVisibility(View.VISIBLE);
+                    tvMessage.setText(message.getMessage());
+                }
+            }
+        }
+    }
+
+    // ==========================================
+    // RECEIVED MESSAGE VIEWHOLDER
+    // ==========================================
+    static class ReceivedMessageViewHolder extends RecyclerView.ViewHolder {
+        TextView tvMessage;
+        ImageView ivImage;
+
+        ReceivedMessageViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvMessage = itemView.findViewById(R.id.tvMessage);
+            ivImage = itemView.findViewById(R.id.ivImage);
+        }
+
+        void bind(ChatMessage message) {
+            if (message.isImage()) {
+                if (tvMessage != null) tvMessage.setVisibility(View.GONE);
+                if (ivImage != null) {
+                    ivImage.setVisibility(View.VISIBLE);
+                    Glide.with(itemView.getContext())
+                            .load(Uri.parse(message.getMessage()))
+                            .into(ivImage);
+                }
+            } else {
+                if (ivImage != null) ivImage.setVisibility(View.GONE);
+                if (tvMessage != null) {
+                    tvMessage.setVisibility(View.VISIBLE);
+                    tvMessage.setText(message.getMessage());
+                }
+            }
         }
     }
 }

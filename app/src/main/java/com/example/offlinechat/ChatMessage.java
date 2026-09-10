@@ -2,24 +2,44 @@ package com.example.offlinechat;
 
 public class ChatMessage {
     private String message;
-    private String imageUri; // Bitmap-এর পরিবর্তে String Uri
-    private boolean isSentByMe;
+    private boolean isSent;
+    private boolean isImage;
 
-    // Text Message Constructor
-    public ChatMessage(String message, boolean isSentByMe) {
+    // টেক্সট মেসেজের জন্য কনস্ট্রাক্টর
+    public ChatMessage(String message, boolean isSent) {
         this.message = message;
-        this.isSentByMe = isSentByMe;
-        this.imageUri = null;
+        this.isSent = isSent;
+        this.isImage = false;
     }
 
-    // Image Message Constructor
-    public ChatMessage(String imageUri, boolean isSentByMe, boolean isImage) {
-        this.imageUri = imageUri;
-        this.isSentByMe = isSentByMe;
-        this.message = null;
+    // ইমেজ মেসেজের জন্য কনস্ট্রাক্টর
+    public ChatMessage(String message, boolean isSent, boolean isImage) {
+        this.message = message;
+        this.isSent = isSent;
+        this.isImage = isImage;
     }
 
-    public String getMessage() { return message; }
-    public String getImageUri() { return imageUri; }
-    public boolean isSentByMe() { return isSentByMe; }
+    public String getMessage() {
+        return message;
+    }
+
+    public boolean isSent() {
+        return isSent;
+    }
+
+    public boolean isSentByMe() {
+        return isSent;
+    }
+
+    public boolean isImage() {
+        return isImage;
+    }
+
+    // ChatAdapter-এর getImageUri() এরর ঠিক করার জন্য হেল্পার মেথড
+    public String getImageUri() {
+        if (isImage) {
+            return message;
+        }
+        return null;
+    }
 }
