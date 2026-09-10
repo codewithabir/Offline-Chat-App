@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Offline Chat"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Status: Ready"
+        android:textSize="16sp"
+        android:layout_marginTop="12dp" />
+
+    <Button
+        android:id="@+id/btnDiscover"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔍 Search Nearby Devices"
+        android:layout_marginTop="20dp" />
+
+    <TextView
+        android:id="@+id/tvDevices"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nearby Devices"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginTop="25dp" />
+
+    <ListView
+        android:id="@+id/deviceListView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="10dp" />
+
+</LinearLayout>
